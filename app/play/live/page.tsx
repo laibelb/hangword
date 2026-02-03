@@ -47,9 +47,9 @@ export default function LiveLobbyPage() {
       // Get a random word
       const { data: wordData, error: wordError } = await supabase
         .rpc('get_any_random_word')
-        .single()
+        .single<{ word_id: number; word: string; category: string; hint: string }>()
 
-      if (wordError) throw wordError
+      if (wordError || !wordData) throw wordError || new Error('No word found')
 
       const code = generateRoomCode()
 
