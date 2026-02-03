@@ -1,0 +1,476 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #ffffff;
+  --text: #121212;
+  --text-light: #787c7e;
+  --border: #d3d6da;
+  --tile-bg: #ffffff;
+  --key-bg: #d3d6da;
+  --correct: #6aaa64;
+  --wrong: #787c7e;
+  --present: #c9b458;
+}
+
+body {
+  font-family: 'Libre Franklin', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 16px 32px;
+    border: none;
+    border-radius: 24px;
+    background: var(--correct);
+    color: white;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-primary:hover {
+    background: #5a9957;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400;
+  }
+
+  .btn-outline {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-outline:hover {
+    border-color: var(--text);
+    color: var(--text);
+  }
+
+  .input {
+    @apply w-full px-4 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+
+  .link {
+    color: var(--correct);
+  }
+
+  .link:hover {
+    color: #5a9957;
+  }
+}
+
+/* Header */
+.header {
+  width: 100%;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: var(--bg);
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+
+.streak-badge {
+  position: absolute;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--present);
+}
+
+.menu-btn {
+  position: absolute;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text);
+}
+
+/* Category label */
+.category {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-light);
+  margin-bottom: 24px;
+}
+
+/* Gallows */
+.gallows {
+  width: 180px;
+  height: 200px;
+  margin-bottom: 28px;
+  position: relative;
+}
+
+.gallows svg {
+  width: 100%;
+  height: 100%;
+}
+
+.gallows-part {
+  stroke: var(--text);
+  stroke-width: 3;
+  stroke-linecap: round;
+  fill: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gallows-part.visible {
+  opacity: 1;
+}
+
+.gallows-base {
+  opacity: 1;
+}
+
+/* Word display */
+.word-container {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+  padding: 0 10px;
+}
+
+.letter-slot {
+  width: 40px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 3px solid var(--text);
+  font-size: 32px;
+  font-weight: 700;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.letter-slot.revealed {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.letter-slot.space {
+  border: none;
+  width: 24px;
+}
+
+.letter-slot.correct {
+  color: var(--correct);
+  border-color: var(--correct);
+}
+
+.letter-slot.wrong {
+  color: #c53030;
+}
+
+@keyframes popIn {
+  0% { transform: scale(1.3); }
+  50% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Guesses remaining dots */
+.guesses-remaining {
+  font-size: 14px;
+  color: var(--text-light);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guess-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.guess-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: all 0.3s ease;
+}
+
+.guess-dot.used {
+  background: var(--border);
+  transform: scale(0.7);
+}
+
+/* Hint */
+.hint-container {
+  margin-bottom: 16px;
+}
+
+.hint-btn {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hint-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.hint-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hint-text {
+  font-size: 14px;
+  color: var(--text);
+  margin-top: 10px;
+  font-style: italic;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Keyboard */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 484px;
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.key {
+  flex: 1;
+  max-width: 43px;
+  height: 58px;
+  border: none;
+  border-radius: 4px;
+  background: var(--key-bg);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.key:active {
+  transform: scale(0.95);
+}
+
+.key.correct {
+  background: var(--correct);
+  color: white;
+}
+
+.key.wrong {
+  background: var(--wrong);
+  color: white;
+}
+
+.key:disabled {
+  cursor: default;
+}
+
+/* Message toast */
+.message {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 14px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 100;
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--bg);
+  padding: 32px 40px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  animation: modalSlide 0.4s ease;
+  max-width: 340px;
+  width: 90%;
+}
+
+@keyframes modalSlide {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.modal h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.modal .word-reveal {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--correct);
+  margin: 16px 0;
+}
+
+.modal .word-reveal.lost {
+  color: var(--wrong);
+}
+
+.modal p {
+  font-size: 15px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.modal .stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 20px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  .letter-slot {
+    width: 32px;
+    height: 44px;
+    font-size: 26px;
+  }
+
+  .key {
+    height: 52px;
+    font-size: 14px;
+  }
+
+  .gallows {
+    width: 150px;
+    height: 170px;
+  }
+}
