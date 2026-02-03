@@ -161,14 +161,14 @@ export default function LiveGamePage() {
     const guessedSet = new Set(newGuessedLetters)
     const allGuessed = [...wordLetters].every(l => guessedSet.has(l))
 
-    let newStatus: 'waiting' | 'playing' | 'won' | 'lost' = game.status
+    let newStatus: LiveGame['status'] = game.status
     let winnerId: string | null = null
 
     if (allGuessed) {
-      newStatus = 'won'
+      newStatus = 'won' as const
       winnerId = user.id
     } else if (newWrongCount >= MAX_WRONG) {
-      newStatus = 'lost'
+      newStatus = 'lost' as const
     }
 
     // Switch turn to other player
