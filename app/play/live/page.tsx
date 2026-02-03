@@ -50,10 +50,19 @@ export default function LiveLobbyPage() {
     setError('')
 
     try {
-      // Get a random word
+      // Get a random word - fetch count first, then random offset
+      const { count } = await supabase
+        .from('words')
+        .select('*', { count: 'exact', head: true })
+
+      if (!count) throw new Error('No words available')
+
+      const randomOffset = Math.floor(Math.random() * count)
       const { data: wordData, error: wordError } = await supabase
-        .rpc('get_any_random_word')
-        .single<{ word_id: number; word: string; category: string; hint: string }>()
+        .from('words')
+        .select('id, word, category, hint')
+        .range(randomOffset, randomOffset)
+        .single()
 
       if (wordError || !wordData) throw wordError || new Error('No word found')
 
@@ -64,7 +73,7 @@ export default function LiveLobbyPage() {
         .from('live_games')
         .insert({
           room_code: code,
-          word_id: wordData.word_id,
+          word_id: wordData.id,
           player1_id: user.id,
           current_turn: user.id,
           status: 'waiting'
