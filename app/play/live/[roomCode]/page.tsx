@@ -161,8 +161,8 @@ export default function LiveGamePage() {
     const guessedSet = new Set(newGuessedLetters)
     const allGuessed = [...wordLetters].every(l => guessedSet.has(l))
 
-    let newStatus = game.status
-    let winnerId = null
+    let newStatus: 'waiting' | 'playing' | 'won' | 'lost' = game.status
+    let winnerId: string | null = null
 
     if (allGuessed) {
       newStatus = 'won'
