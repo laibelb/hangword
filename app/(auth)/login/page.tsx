@@ -8,11 +8,12 @@ import { createClient } from '@/lib/supabase/client'
 function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') || '/'
+  const callbackError = searchParams.get('error')
+  const [error, setError] = useState(callbackError || '')
   const supabase = createClient()
 
   const handleEmailLogin = async (e: React.FormEvent) => {
