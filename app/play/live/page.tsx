@@ -62,7 +62,7 @@ export default function LiveLobbyPage() {
       // Get a random word using database randomization
       const { data: wordData, error: wordError } = await supabase
         .rpc('get_any_random_word')
-        .single()
+        .single<{ word_id: number; word: string; category: string; hint: string; difficulty: number }>()
 
       if (wordError || !wordData) throw wordError || new Error('No word found')
 
