@@ -388,7 +388,7 @@ export default function LiveGamePage() {
                       key={letter}
                       onClick={() => handleGuess(letter)}
                       disabled={isGuessed || !isMyTurn}
-                      className={`key ${isCorrect ? 'correct' : ''} ${isWrong ? 'wrong' : ''}`}
+                      className={`key ${isCorrect ? 'revealed' : ''} ${isWrong ? 'wrong' : ''}`}
                     >
                       {letter}
                     </button>
