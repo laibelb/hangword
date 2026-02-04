@@ -6,8 +6,20 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/game/Header'
 
+// Generate or get guest ID from localStorage
+function getGuestId(): string {
+  if (typeof window === 'undefined') return ''
+  let guestId = localStorage.getItem('hangword-guest-id')
+  if (!guestId) {
+    guestId = 'guest_' + Math.random().toString(36).substring(2, 15)
+    localStorage.setItem('hangword-guest-id', guestId)
+  }
+  return guestId
+}
+
 export default function LiveLobbyPage() {
   const [user, setUser] = useState<any>(null)
+  const [guestId, setGuestId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -17,6 +29,8 @@ export default function LiveLobbyPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    setGuestId(getGuestId())
+
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
@@ -41,16 +55,11 @@ export default function LiveLobbyPage() {
   }
 
   const handleCreateRoom = async () => {
-    if (!user) {
-      router.push('/login?redirectTo=/play/live')
-      return
-    }
-
     setCreating(true)
     setError('')
 
     try {
-      // Get a random word - fetch count first, then random offset
+      // Get a random word
       const { count } = await supabase
         .from('words')
         .select('*', { count: 'exact', head: true })
@@ -68,14 +77,15 @@ export default function LiveLobbyPage() {
 
       const code = generateRoomCode()
 
-      // Create the room
+      // Create the room - use user ID if signed in, guest ID if not
       const { data: room, error: roomError } = await supabase
         .from('live_games')
         .insert({
           room_code: code,
           word_id: wordData.id,
-          player1_id: user.id,
-          current_turn: user.id,
+          player1_id: user?.id || null,
+          player1_guest_id: user ? null : guestId,
+          current_turn: user?.id || guestId,
           status: 'waiting'
         })
         .select()
@@ -93,10 +103,6 @@ export default function LiveLobbyPage() {
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) {
-      router.push('/login?redirectTo=/play/live')
-      return
-    }
 
     if (!roomCode.trim()) {
       setError('Please enter a room code')
@@ -124,8 +130,11 @@ export default function LiveLobbyPage() {
         throw new Error('This game has already started')
       }
 
-      if (room.player1_id === user.id) {
-        // Already in this room, just go to it
+      // Check if already in this room
+      const isPlayer1 = (user && room.player1_id === user.id) ||
+                        (!user && room.player1_guest_id === guestId)
+
+      if (isPlayer1) {
         router.push(`/play/live/${code}`)
         return
       }
@@ -134,7 +143,8 @@ export default function LiveLobbyPage() {
       const { error: joinError } = await supabase
         .from('live_games')
         .update({
-          player2_id: user.id,
+          player2_id: user?.id || null,
+          player2_guest_id: user ? null : guestId,
           status: 'playing',
           updated_at: new Date().toISOString()
         })
@@ -201,8 +211,8 @@ export default function LiveLobbyPage() {
 
         {!user && (
           <div style={{
-            background: '#fef3c7',
-            color: '#92400e',
+            background: '#f0fdf4',
+            color: '#166534',
             padding: '12px 16px',
             borderRadius: '8px',
             marginBottom: '24px',
@@ -210,9 +220,10 @@ export default function LiveLobbyPage() {
             fontSize: '14px',
             textAlign: 'center'
           }}>
-            <Link href="/login?redirectTo=/play/live" style={{ color: '#92400e', fontWeight: 600 }}>
+            Playing as guest.{' '}
+            <Link href="/login?redirectTo=/play/live" style={{ color: '#166534', fontWeight: 600 }}>
               Sign in
-            </Link> to play live with friends
+            </Link> to save your stats!
           </div>
         )}
 

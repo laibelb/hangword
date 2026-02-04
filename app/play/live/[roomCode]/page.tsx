@@ -11,8 +11,10 @@ interface LiveGame {
   id: string
   room_code: string
   word_id: number
-  player1_id: string
+  player1_id: string | null
+  player1_guest_id: string | null
   player2_id: string | null
+  player2_guest_id: string | null
   current_turn: string
   guessed_letters: string[]
   wrong_count: number
@@ -29,12 +31,24 @@ interface Word {
 const KEYBOARD_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM']
 const MAX_WRONG = 6
 
+// Generate or get guest ID from localStorage
+function getGuestId(): string {
+  if (typeof window === 'undefined') return ''
+  let guestId = localStorage.getItem('hangword-guest-id')
+  if (!guestId) {
+    guestId = 'guest_' + Math.random().toString(36).substring(2, 15)
+    localStorage.setItem('hangword-guest-id', guestId)
+  }
+  return guestId
+}
+
 export default function LiveGamePage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = (params.roomCode as string).toUpperCase()
 
   const [user, setUser] = useState<any>(null)
+  const [guestId, setGuestId] = useState<string>('')
   const [game, setGame] = useState<LiveGame | null>(null)
   const [word, setWord] = useState<Word | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,23 +57,25 @@ export default function LiveGamePage() {
 
   const supabase = createClient()
 
+  // Get player identifier (user ID or guest ID)
+  const myPlayerId = user?.id || guestId
+
   // Check if it's my turn
-  const isMyTurn = user && game && game.current_turn === user.id
-  const isPlayer1 = user && game && game.player1_id === user.id
-  const isPlayer2 = user && game && game.player2_id === user.id
+  const isMyTurn = game && game.current_turn === myPlayerId
+  const isPlayer1 = game && ((user && game.player1_id === user.id) || (!user && game.player1_guest_id === guestId))
+  const isPlayer2 = game && ((user && game.player2_id === user.id) || (!user && game.player2_guest_id === guestId))
   const isInGame = isPlayer1 || isPlayer2
 
   // Load game and subscribe to updates
   useEffect(() => {
+    setGuestId(getGuestId())
+
     const init = async () => {
       // Get current user
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       setUser(currentUser)
 
-      if (!currentUser) {
-        router.push(`/login?redirectTo=/play/live/${roomCode}`)
-        return
-      }
+      const currentGuestId = getGuestId()
 
       // Load game
       const { data: gameData, error: gameError } = await supabase
@@ -87,8 +103,10 @@ export default function LiveGamePage() {
         setWord(wordData)
       }
 
-      // Load player usernames
+      // Load player usernames for signed-in players
       const playerIds = [gameData.player1_id, gameData.player2_id].filter(Boolean)
+      const playerMap: { [key: string]: string } = {}
+
       if (playerIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
@@ -96,14 +114,21 @@ export default function LiveGamePage() {
           .in('id', playerIds)
 
         if (profiles) {
-          const playerMap: { [key: string]: string } = {}
           profiles.forEach((p: any) => {
             playerMap[p.id] = p.username || 'Player'
           })
-          setPlayers(playerMap)
         }
       }
 
+      // Add guest player names
+      if (gameData.player1_guest_id) {
+        playerMap[gameData.player1_guest_id] = 'Guest'
+      }
+      if (gameData.player2_guest_id) {
+        playerMap[gameData.player2_guest_id] = 'Guest'
+      }
+
+      setPlayers(playerMap)
       setLoading(false)
     }
 
@@ -126,17 +151,25 @@ export default function LiveGamePage() {
             setGame(payload.new as LiveGame)
 
             // Reload players if player2 just joined
-            if ((payload.new as LiveGame).player2_id && !(payload.old as any)?.player2_id) {
-              supabase
-                .from('profiles')
-                .select('id, username')
-                .eq('id', (payload.new as LiveGame).player2_id)
-                .single()
-                .then(({ data }) => {
-                  if (data) {
-                    setPlayers(prev => ({ ...prev, [data.id]: data.username || 'Player' }))
-                  }
-                })
+            const newGame = payload.new as LiveGame
+            const oldGame = payload.old as any
+
+            if ((newGame.player2_id && !oldGame?.player2_id) ||
+                (newGame.player2_guest_id && !oldGame?.player2_guest_id)) {
+              if (newGame.player2_id) {
+                supabase
+                  .from('profiles')
+                  .select('id, username')
+                  .eq('id', newGame.player2_id)
+                  .single()
+                  .then(({ data }) => {
+                    if (data) {
+                      setPlayers(prev => ({ ...prev, [data.id]: data.username || 'Player' }))
+                    }
+                  })
+              } else if (newGame.player2_guest_id) {
+                setPlayers(prev => ({ ...prev, [newGame.player2_guest_id!]: 'Guest' }))
+              }
             }
           }
         }
@@ -150,9 +183,9 @@ export default function LiveGamePage() {
 
   const handleGuess = useCallback(async (letter: string) => {
     if (!game || !word || !isMyTurn || game.status !== 'playing') return
-    if (game.guessed_letters.includes(letter)) return
+    if (game.guessed_letters?.includes(letter)) return
 
-    const newGuessedLetters = [...game.guessed_letters, letter]
+    const newGuessedLetters = [...(game.guessed_letters || []), letter]
     const isCorrect = word.word.toUpperCase().includes(letter)
     const newWrongCount = isCorrect ? game.wrong_count : game.wrong_count + 1
 
@@ -166,13 +199,15 @@ export default function LiveGamePage() {
 
     if (allGuessed) {
       newStatus = 'won' as const
-      winnerId = user.id
+      winnerId = myPlayerId
     } else if (newWrongCount >= MAX_WRONG) {
       newStatus = 'lost' as const
     }
 
     // Switch turn to other player
-    const nextTurn = game.player1_id === user.id ? game.player2_id : game.player1_id
+    const player1Id = game.player1_id || game.player1_guest_id
+    const player2Id = game.player2_id || game.player2_guest_id
+    const nextTurn = myPlayerId === player1Id ? player2Id : player1Id
 
     const { error } = await supabase
       .from('live_games')
@@ -189,7 +224,7 @@ export default function LiveGamePage() {
     if (error) {
       console.error('Error updating game:', error)
     }
-  }, [game, word, isMyTurn, user, supabase])
+  }, [game, word, isMyTurn, myPlayerId, supabase])
 
   // Keyboard handler
   useEffect(() => {
@@ -230,7 +265,9 @@ export default function LiveGamePage() {
 
   if (!game || !word) return null
 
-  const guessedSet = new Set(game.guessed_letters)
+  const guessedSet = new Set(game.guessed_letters || [])
+  const player1Id = game.player1_id || game.player1_guest_id
+  const player2Id = game.player2_id || game.player2_guest_id
 
   return (
     <>
@@ -283,15 +320,15 @@ export default function LiveGamePage() {
             width: '100%'
           }}>
             <PlayerBadge
-              name={players[game.player1_id] || 'Player 1'}
-              isCurrentTurn={game.current_turn === game.player1_id}
-              isYou={game.player1_id === user?.id}
+              name={players[player1Id!] || 'Player 1'}
+              isCurrentTurn={game.current_turn === player1Id}
+              isYou={player1Id === myPlayerId}
             />
             <span style={{ color: 'var(--text-light)', fontWeight: 600 }}>vs</span>
             <PlayerBadge
-              name={players[game.player2_id!] || 'Player 2'}
-              isCurrentTurn={game.current_turn === game.player2_id}
-              isYou={game.player2_id === user?.id}
+              name={players[player2Id!] || 'Player 2'}
+              isCurrentTurn={game.current_turn === player2Id}
+              isYou={player2Id === myPlayerId}
             />
           </div>
         )}
@@ -360,7 +397,7 @@ export default function LiveGamePage() {
               <>
                 <p style={{ fontSize: '24px', marginBottom: '4px' }}>🎉</p>
                 <p style={{ fontWeight: 600 }}>
-                  {game.winner_id === user?.id ? 'You won!' : `${players[game.winner_id!] || 'Opponent'} won!`}
+                  {game.winner_id === myPlayerId ? 'You won!' : `${players[game.winner_id!] || 'Opponent'} won!`}
                 </p>
               </>
             ) : (
