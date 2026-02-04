@@ -209,7 +209,18 @@ export default function LiveGamePage() {
     const player2Id = game.player2_id || game.player2_guest_id
     const nextTurn = myPlayerId === player1Id ? player2Id : player1Id
 
-    const { error } = await supabase
+    // Optimistic update - show change immediately
+    setGame(prev => prev ? {
+      ...prev,
+      guessed_letters: newGuessedLetters,
+      wrong_count: newWrongCount,
+      current_turn: newStatus === 'playing' ? nextTurn! : prev.current_turn,
+      status: newStatus,
+      winner_id: winnerId
+    } : null)
+
+    // Then sync with server (don't await)
+    supabase
       .from('live_games')
       .update({
         guessed_letters: newGuessedLetters,
@@ -220,10 +231,9 @@ export default function LiveGamePage() {
         updated_at: new Date().toISOString()
       })
       .eq('id', game.id)
-
-    if (error) {
-      console.error('Error updating game:', error)
-    }
+      .then(({ error }) => {
+        if (error) console.error('Error updating game:', error)
+      })
   }, [game, word, isMyTurn, myPlayerId, supabase])
 
   // Keyboard handler
