@@ -303,7 +303,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get a random word (excluding recently played)
-CREATE OR REPLACE FUNCTION get_random_word(p_user_id UUID, p_exclude_recent INT DEFAULT 10)
+CREATE OR REPLACE FUNCTION get_random_word(p_user_id UUID, p_exclude_recent INT DEFAULT 50)
 RETURNS TABLE (
   word_id INT,
   word TEXT,

@@ -23,7 +23,7 @@ export async function GET() {
     if (user) {
       // Get random word excluding recently played
       const { data, error } = await supabase
-        .rpc('get_random_word', { p_user_id: user.id, p_exclude_recent: 10 })
+        .rpc('get_random_word', { p_user_id: user.id, p_exclude_recent: 50 })
         .single<RandomWordResult>()
 
       if (error) throw error
