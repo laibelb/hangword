@@ -12,6 +12,8 @@ export function createInitialGameState(
     hint,
     category,
     guessedLetters: new Set(),
+    confirmedLetters: new Set(),  // Yellow: in word but not revealed
+    revealedLetters: new Set(),   // Green: shown in word display
     wrongGuesses: 0,
     maxWrongGuesses: MAX_WRONG_GUESSES,
     status: 'playing',
@@ -23,43 +25,79 @@ export function createInitialGameState(
 export function processGuess(state: GameState, letter: string): GameState {
   const upperLetter = letter.toUpperCase()
 
-  // Already guessed this letter
-  if (state.guessedLetters.has(upperLetter)) {
-    return state
-  }
-
   // Game already over
   if (state.status !== 'playing') {
     return state
   }
 
-  const newGuessedLetters = new Set(state.guessedLetters)
-  newGuessedLetters.add(upperLetter)
+  const isInWord = state.word.includes(upperLetter)
 
-  const isWrongGuess = !state.word.includes(upperLetter)
-  const newWrongGuesses = isWrongGuess
-    ? state.wrongGuesses + 1
-    : state.wrongGuesses
+  // Letter already confirmed (yellow) - reveal it (green)
+  if (state.confirmedLetters.has(upperLetter)) {
+    const newConfirmedLetters = new Set(state.confirmedLetters)
+    newConfirmedLetters.delete(upperLetter)
 
-  const newStatus = calculateGameStatus(
-    state.word,
-    newGuessedLetters,
-    newWrongGuesses,
-    state.maxWrongGuesses
-  )
+    const newRevealedLetters = new Set(state.revealedLetters)
+    newRevealedLetters.add(upperLetter)
 
-  return {
-    ...state,
-    guessedLetters: newGuessedLetters,
-    wrongGuesses: newWrongGuesses,
-    status: newStatus,
-    endTime: newStatus !== 'playing' ? Date.now() : null,
+    const newStatus = calculateGameStatus(
+      state.word,
+      newRevealedLetters,
+      state.wrongGuesses,
+      state.maxWrongGuesses
+    )
+
+    return {
+      ...state,
+      confirmedLetters: newConfirmedLetters,
+      revealedLetters: newRevealedLetters,
+      status: newStatus,
+      endTime: newStatus !== 'playing' ? Date.now() : null,
+    }
+  }
+
+  // Already revealed or wrong - ignore
+  if (state.revealedLetters.has(upperLetter) || state.guessedLetters.has(upperLetter)) {
+    return state
+  }
+
+  // New guess
+  if (isInWord) {
+    // Correct - add to confirmed (yellow)
+    const newConfirmedLetters = new Set(state.confirmedLetters)
+    newConfirmedLetters.add(upperLetter)
+
+    return {
+      ...state,
+      confirmedLetters: newConfirmedLetters,
+    }
+  } else {
+    // Wrong guess
+    const newGuessedLetters = new Set(state.guessedLetters)
+    newGuessedLetters.add(upperLetter)
+
+    const newWrongGuesses = state.wrongGuesses + 1
+
+    const newStatus = calculateGameStatus(
+      state.word,
+      state.revealedLetters,
+      newWrongGuesses,
+      state.maxWrongGuesses
+    )
+
+    return {
+      ...state,
+      guessedLetters: newGuessedLetters,
+      wrongGuesses: newWrongGuesses,
+      status: newStatus,
+      endTime: newStatus !== 'playing' ? Date.now() : null,
+    }
   }
 }
 
 function calculateGameStatus(
   word: string,
-  guessedLetters: Set<string>,
+  revealedLetters: Set<string>,
   wrongGuesses: number,
   maxWrongGuesses: number
 ): GameStatus {
@@ -68,39 +106,49 @@ function calculateGameStatus(
     return 'lost'
   }
 
-  // Won - all letters guessed
+  // Won - all letters revealed
   const wordLetters = new Set(word.replace(/[^A-Z]/g, ''))
-  const allLettersGuessed = Array.from(wordLetters).every((letter) =>
-    guessedLetters.has(letter)
+  const allLettersRevealed = Array.from(wordLetters).every((letter) =>
+    revealedLetters.has(letter)
   )
 
-  if (allLettersGuessed) {
+  if (allLettersRevealed) {
     return 'won'
   }
 
   return 'playing'
 }
 
-export function getDisplayWord(word: string, guessedLetters: Set<string>): string[] {
+export function getDisplayWord(word: string, revealedLetters: Set<string>): string[] {
   return word.split('').map((char) => {
     if (char === ' ') return ' '
     if (!/[A-Z]/.test(char)) return char
-    return guessedLetters.has(char) ? char : '_'
+    return revealedLetters.has(char) ? char : '_'
   })
 }
 
 export function getLetterStatus(
   letter: string,
   word: string,
-  guessedLetters: Set<string>
-): 'unused' | 'correct' | 'wrong' {
+  guessedLetters: Set<string>,
+  confirmedLetters: Set<string>,
+  revealedLetters: Set<string>
+): 'unused' | 'confirmed' | 'revealed' | 'wrong' {
   const upperLetter = letter.toUpperCase()
 
-  if (!guessedLetters.has(upperLetter)) {
-    return 'unused'
+  if (revealedLetters.has(upperLetter)) {
+    return 'revealed'  // Green
   }
 
-  return word.includes(upperLetter) ? 'correct' : 'wrong'
+  if (confirmedLetters.has(upperLetter)) {
+    return 'confirmed'  // Yellow
+  }
+
+  if (guessedLetters.has(upperLetter)) {
+    return 'wrong'  // Gray/red
+  }
+
+  return 'unused'
 }
 
 export function calculateDuration(startTime: number, endTime: number | null): number {

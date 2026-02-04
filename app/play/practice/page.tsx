@@ -61,7 +61,9 @@ export default function PracticePage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const guessedLetters = gameState ? Array.from(gameState.guessedLetters) : []
+        const allGuessedLetters = gameState
+          ? [...Array.from(gameState.guessedLetters), ...Array.from(gameState.confirmedLetters), ...Array.from(gameState.revealedLetters)]
+          : []
 
         await fetch('/api/submit-game', {
           method: 'POST',
@@ -70,7 +72,7 @@ export default function PracticePage() {
             word_id: 1,
             is_daily: false,
             won,
-            guesses_used: guessedLetters,
+            guesses_used: allGuessedLetters,
             wrong_count: wrongCount,
             duration_seconds: duration,
           }),

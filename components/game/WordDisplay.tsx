@@ -4,12 +4,12 @@ import { GameStatus } from '@/types'
 
 interface WordDisplayProps {
   word: string
-  guessedLetters: Set<string>
+  revealedLetters: Set<string>
   status: GameStatus
 }
 
-export default function WordDisplay({ word, guessedLetters, status }: WordDisplayProps) {
-  const isRevealed = status === 'lost'
+export default function WordDisplay({ word, revealedLetters, status }: WordDisplayProps) {
+  const gameLost = status === 'lost'
 
   return (
     <div className="word-container">
@@ -20,19 +20,19 @@ export default function WordDisplay({ word, guessedLetters, status }: WordDispla
 
         const isLetter = /[A-Z]/i.test(char)
         const upperChar = char.toUpperCase()
-        const wasGuessed = isLetter && guessedLetters.has(upperChar)
-        const shouldReveal = isRevealed && isLetter && !wasGuessed
+        const wasRevealed = isLetter && revealedLetters.has(upperChar)
+        const shouldShowOnLoss = gameLost && isLetter && !wasRevealed
 
         let className = 'letter-slot'
-        if (wasGuessed) {
+        if (wasRevealed) {
           className += ' revealed correct'
-        } else if (shouldReveal) {
+        } else if (shouldShowOnLoss) {
           className += ' revealed wrong'
         }
 
         return (
           <div key={index} className={className}>
-            {wasGuessed ? upperChar : shouldReveal ? upperChar : ''}
+            {wasRevealed ? upperChar : shouldShowOnLoss ? upperChar : ''}
           </div>
         )
       })}

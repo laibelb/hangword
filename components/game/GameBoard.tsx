@@ -66,7 +66,7 @@ export default function GameBoard({
       {/* Word Display */}
       <WordDisplay
         word={gameState.word}
-        guessedLetters={gameState.guessedLetters}
+        revealedLetters={gameState.revealedLetters}
         status={gameState.status}
       />
 
@@ -101,6 +101,8 @@ export default function GameBoard({
       <Keyboard
         word={gameState.word}
         guessedLetters={gameState.guessedLetters}
+        confirmedLetters={gameState.confirmedLetters}
+        revealedLetters={gameState.revealedLetters}
         status={gameState.status}
         onGuess={handleGuess}
       />

@@ -86,6 +86,8 @@ export interface GameState {
   hint: string
   category: string
   guessedLetters: Set<string>
+  confirmedLetters: Set<string>  // Yellow: in word but not revealed yet
+  revealedLetters: Set<string>   // Green: revealed in word display
   wrongGuesses: number
   maxWrongGuesses: number
   status: GameStatus

@@ -57,7 +57,9 @@ export default function DailyPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const guessedLetters = gameState ? Array.from(gameState.guessedLetters) : []
+        const allGuessedLetters = gameState
+          ? [...Array.from(gameState.guessedLetters), ...Array.from(gameState.confirmedLetters), ...Array.from(gameState.revealedLetters)]
+          : []
 
         await fetch('/api/submit-game', {
           method: 'POST',
@@ -66,7 +68,7 @@ export default function DailyPage() {
             word_id: word.id,
             is_daily: true,
             won,
-            guesses_used: guessedLetters,
+            guesses_used: allGuessedLetters,
             wrong_count: wrongCount,
             duration_seconds: duration,
           }),
